@@ -97,7 +97,10 @@ class SearchResultList extends ConsumerWidget {
                   title: results[index].name,
                   subtitle: '管理员： ${results[index].admins.join(",")}',
                   end: results[index].desc,
-                  click: () => context.go("/detail?tenant=${results[index].name}"),
+                  click: () async {
+                    await createApply(results[index].name);
+                    ref.refresh(myApplyListProvider);
+                  },
                 );
               }),
         ),

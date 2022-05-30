@@ -165,6 +165,10 @@ class OtherApplyList extends ConsumerWidget {
                         title: applies[index].tenant,
                         subtitle: '管理员： ${applies[index].admins.join(",")}',
                         end: '申请人: ${applies[index].applier}',
+                        click: () async {
+                          await allowApply(applies[index].applier, applies[index].tenant);
+                          ref.refresh(otherApplyListProvider);
+                        },
                       );
                     }),
               ),

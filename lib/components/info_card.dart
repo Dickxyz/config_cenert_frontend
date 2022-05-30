@@ -42,7 +42,7 @@ class InfoCard extends ConsumerWidget {
               return;
             }
             ref.read(chooseStateProvider.notifier).state = '__default__';
-            context.go("/detail?tenant=${config.tenant}&path=${config.path}");
+            context.go("/detail?tenant=${config.tenant}&path=${config.path}/");
           },
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,

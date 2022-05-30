@@ -36,6 +36,9 @@ Future<List<Tenant>> getTenant(String? nameLike) async {
 
   resp.data as Map;
   List<Tenant> res = [];
+  if (resp.data["tenant_list"] == null) {
+    return res;
+  }
   for (var item in resp.data["tenant_list"]) {
     res.add(Tenant.fromJson(item));
   }
@@ -60,7 +63,12 @@ Future<List<Config>> getConfigs(String tenant, pathStartWith) async {
   List<Config> res = [];
   final resp = await dio
       .get("/configs/$tenant", queryParameters: {"start_with": pathStartWith});
+
+  if (resp.data["config_map"] == null) {
+    return res;
+  }
   Map<String, dynamic> tmp = resp.data["config_map"];
+
   tmp.forEach((key, value) {
     res.add(Config.fromJson({
       "path": key,
@@ -93,6 +101,9 @@ class Apply {
 Future<List<Apply>> getMyApply() async {
   List<Apply> res = [];
   final resp = await dio.get("/users/apply");
+  if (resp.data["apply_list"] == null) {
+    return res;
+  }
   for (var item in resp.data["apply_list"]) {
     res.add(Apply.fromJson({
       'tenant': item["tenant"],
@@ -107,6 +118,9 @@ Future<List<Apply>> getMyApply() async {
 Future<List<Apply>> getOtherApply() async {
   List<Apply> res = [];
   final resp = await dio.get("/users/other_apply");
+  if (resp.data["apply_list"] == null) {
+    return res;
+  }
   for (var item in resp.data["apply_list"]) {
     res.add(Apply.fromJson({
       'tenant': item["tenant"],
@@ -133,6 +147,14 @@ Future<void> updateConfig(String tenant, path, cap, rate, failUpperRate) async {
 
 Future<void> delConfig(String tenant, path) async {
   final resp = await dio.delete("/configs/$tenant", data: {"key": path});
+}
+
+Future<void> createApply(String tenant) async {
+  final resp = await dio.post("/permission/$tenant");
+}
+
+Future<void> allowApply(String user, tenant) async {
+  final resp = await dio.put("/permission/$tenant", data: {"user": user});
 }
 
 void main() async {
