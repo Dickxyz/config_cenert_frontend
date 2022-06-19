@@ -21,6 +21,8 @@ dependencies:
   flutter_speed_dial: ^6.0.0
   tuple: ^2.0.0
   adaptive_dialog: ^1.6.3
+  proste_bezier_curve: ^2.0.2
+  shared_preferences: ^2.0.15
 
 dev_dependencies:
   flutter_test:

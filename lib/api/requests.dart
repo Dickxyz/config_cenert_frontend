@@ -1,17 +1,25 @@
 import 'package:dio/dio.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 const BASEURL = "http://localhost:8888";
-const FIRSTTOKEN = "bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAiOjI2NTM4Mjc4NDksImlhdCI6MTY1MzgyNzg0OSwidXNlcklkIjoxfQ.705LUN9OEOPXaX4N8kFG272zF9eVUT0WxHU6Z8ZkD0s";
-const SECONDTOKEN = "bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAiOjI2NTM4MjcxOTIsImlhdCI6MTY1MzgyNzE5MiwidXNlcklkIjoyfQ.nBHs8oQ5tVOTHk7py8__Tz8p5Mx1eidKOjWBP4wbHaI";
-final OPTIONS = BaseOptions(baseUrl: BASEURL, followRedirects: true, headers: {
-  "Authorization": FIRSTTOKEN
-});
+const FIRSTTOKEN =
+    "bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAiOjI2NTM4Mjc4NDksImlhdCI6MTY1MzgyNzg0OSwidXNlcklkIjoxfQ.705LUN9OEOPXaX4N8kFG272zF9eVUT0WxHU6Z8ZkD0s";
+const SECONDTOKEN =
+    "bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAiOjI2NTM4MjcxOTIsImlhdCI6MTY1MzgyNzE5MiwidXNlcklkIjoyfQ.nBHs8oQ5tVOTHk7py8__Tz8p5Mx1eidKOjWBP4wbHaI";
+final OPTIONS = BaseOptions(
+    baseUrl: BASEURL,
+    followRedirects: true,
+    headers: {"Authorization": FIRSTTOKEN});
 final dio = Dio(OPTIONS);
 
 Future<String> login(String username, password) async {
+  final prefs = await SharedPreferences.getInstance();
   final res = await dio
       .put("/users", data: {"username": username, "password": password});
   res.data as Map;
+  final token = "bearer ${res.data["token"]}";
+  await prefs.setString('token', token);
+  dio.options.headers = {"Authorization": token};
   return res.data["token"];
 }
 
@@ -138,11 +146,21 @@ Future<void> createTenant(String name, desc) async {
 }
 
 Future<void> createConfig(String tenant, path, cap, rate, failUpperRate) async {
-  final resp = await dio.post("/configs/$tenant", data: {"cap": int.parse(cap), "rate": int.parse(rate), "fail_upper_rate": double.parse(failUpperRate), "key": path});
+  final resp = await dio.post("/configs/$tenant", data: {
+    "cap": int.parse(cap),
+    "rate": int.parse(rate),
+    "fail_upper_rate": double.parse(failUpperRate),
+    "key": path
+  });
 }
 
 Future<void> updateConfig(String tenant, path, cap, rate, failUpperRate) async {
-  final resp = await dio.put("/configs/$tenant", data: {"cap": int.parse(cap), "rate": int.parse(rate), "fail_upper_rate": double.parse(failUpperRate), "key": path});
+  final resp = await dio.put("/configs/$tenant", data: {
+    "cap": int.parse(cap),
+    "rate": int.parse(rate),
+    "fail_upper_rate": double.parse(failUpperRate),
+    "key": path
+  });
 }
 
 Future<void> delConfig(String tenant, path) async {
@@ -155,6 +173,21 @@ Future<void> createApply(String tenant) async {
 
 Future<void> allowApply(String user, tenant) async {
   final resp = await dio.put("/permission/$tenant", data: {"user": user});
+}
+
+Future<void> createAccount(String email, password) async {
+  final resp =
+      await dio.post("/users", data: {"username": email, "password": password});
+}
+
+Future<bool> checkLogin() async {
+  final prefs = await SharedPreferences.getInstance();
+  final String? token = prefs.getString('token');
+  if (token != null) {
+    dio.options.headers = {"Authorization": token};
+    return true;
+  }
+  return false;
 }
 
 void main() async {

@@ -8,6 +8,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_speed_dial/flutter_speed_dial.dart';
 import 'package:go_router/go_router.dart';
 import 'package:responsive_dashboard_ui/provider.dart';
+import 'package:responsive_dashboard_ui/signin.dart';
+import 'package:responsive_dashboard_ui/signup.dart';
 import 'package:responsive_dashboard_ui/style/colors.dart';
 import 'package:responsive_dashboard_ui/style/style.dart';
 import 'package:tuple/tuple.dart';
@@ -22,56 +24,80 @@ import 'components/payments_detail_list.dart';
 import 'components/side_menu.dart';
 import 'config/size_config.dart';
 
-void main() => runApp(ProviderScope(child: App()));
+void main() async {
+  bool isLogin = await checkLogin();
+  runApp(ProviderScope(child: App(isLogin: isLogin)));
+}
 
 /// The main app.
-class App extends StatelessWidget {
+class App extends ConsumerWidget {
   /// Creates an [App].
-  App({Key? key}) : super(key: key);
+  App({Key? key, required this.isLogin}) : super(key: key);
 
+  final bool isLogin;
   /// The title of the app.
   static const String title = 'RateLimiter';
 
   @override
-  Widget build(BuildContext context) => MaterialApp.router(
-        routeInformationParser: _router.routeInformationParser,
-        routerDelegate: _router.routerDelegate,
-        title: title,
-        theme: ThemeData(
-          primarySwatch: Colors.blue,
-          scaffoldBackgroundColor: AppColors.primaryBg,
-        ),
-      );
-
-  final GoRouter _router = GoRouter(
-      routes: <GoRoute>[
-        GoRoute(
-            path: '/home',
-            builder: (BuildContext context, GoRouterState state) =>
-                const HomePage(index: 0)),
-        GoRoute(
-            path: '/detail',
-            builder: (BuildContext context, GoRouterState state) {
-              final tenant = state.queryParams['tenant'];
-              final path = state.queryParams["path"];
-              return HomePage(index: 1, tenant: tenant, path: path);
-            })
-      ],
-      redirect: (state) {
-        if (state.subloc == "/") {
-          return "/home";
-        }
-        if (state.subloc.startsWith("/detail")) {
-          final tenant = state.queryParams['tenant'];
-          if (tenant == null) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    ref.read(loginStateProvider.notifier).state = isLogin;
+    final GoRouter _router = GoRouter(
+        debugLogDiagnostics: true,
+        routes: <GoRoute>[
+          GoRoute(
+              path: '/signup',
+              builder: (BuildContext context, GoRouterState state) =>
+                  const SignUpPage()),
+          GoRoute(
+              path: '/login',
+              builder: (BuildContext context, GoRouterState state) =>
+                  SignInPage()),
+          GoRoute(
+              path: '/home',
+              builder: (BuildContext context, GoRouterState state) =>
+                  const HomePage(index: 0)),
+          GoRoute(
+              path: '/detail',
+              builder: (BuildContext context, GoRouterState state) {
+                final tenant = state.queryParams['tenant'];
+                final path = state.queryParams["path"];
+                return HomePage(index: 1, tenant: tenant, path: path);
+              })
+        ],
+        redirect: (state) {
+          if (state.subloc == "/login") {
+            return null;
+          }
+          if (!ref.read(loginStateProvider)) {
+            return "/login";
+          }
+          if (state.subloc == "/login") {
+            return null;
+          }
+          if (state.subloc == "/") {
             return "/home";
           }
-          final path = state.queryParams["path"];
-          if (path == null) {
-            return "/detail?tenant=$tenant&path=/";
+          if (state.subloc.startsWith("/detail")) {
+            final tenant = state.queryParams['tenant'];
+            if (tenant == null) {
+              return "/home";
+            }
+            final path = state.queryParams["path"];
+            if (path == null) {
+              return "/detail?tenant=$tenant&path=/";
+            }
           }
-        }
-      });
+        });
+    return MaterialApp.router(
+      routeInformationParser: _router.routeInformationParser,
+      routerDelegate: _router.routerDelegate,
+      title: title,
+      theme: ThemeData(
+        primarySwatch: Colors.blue,
+        scaffoldBackgroundColor: AppColors.primaryBg,
+      ),
+    );
+  }
 }
 
 /// The screen of the first page.
@@ -265,7 +291,8 @@ class ConfigTab extends ConsumerWidget {
                       label: '编辑',
                       labelStyle: TextStyle(fontSize: 18.0),
                       onTap: () async {
-                        var configName = ref.read(chooseStateProvider.notifier).state;
+                        var configName =
+                            ref.read(chooseStateProvider.notifier).state;
                         List<String>? res = await showTextInputDialog(
                           title: "更新配置",
                           okLabel: "更新",
@@ -273,15 +300,27 @@ class ConfigTab extends ConsumerWidget {
                           cancelLabel: "取消",
                           context: context,
                           textFields: [
-                            DialogTextField(initialText: configMap[configName]?.cap.toString(), suffixText: "桶容量"),
-                            DialogTextField(initialText: configMap[configName]?.rate.toString(), suffixText: "令牌生产速率/秒"),
-                            DialogTextField(initialText: configMap[configName]?.fail_upper_rate.toString(), suffixText: "失败率上限"),
+                            DialogTextField(
+                                initialText:
+                                    configMap[configName]?.cap.toString(),
+                                suffixText: "桶容量"),
+                            DialogTextField(
+                                initialText:
+                                    configMap[configName]?.rate.toString(),
+                                suffixText: "令牌生产速率/秒"),
+                            DialogTextField(
+                                initialText: configMap[configName]
+                                    ?.fail_upper_rate
+                                    .toString(),
+                                suffixText: "失败率上限"),
                           ],
                         );
                         if (res != null) {
                           print('${res[0]}, ${res[1]}, ${res[2]}');
-                          await updateConfig(tenant, path + configName, res[0], res[1], res[2]);
-                          ref.refresh(configResultProvider(Tuple2<String, String>(tenant, path)));
+                          await updateConfig(tenant, path + configName, res[0],
+                              res[1], res[2]);
+                          ref.refresh(configResultProvider(
+                              Tuple2<String, String>(tenant, path)));
                         }
                       },
                     ),
@@ -305,8 +344,10 @@ class ConfigTab extends ConsumerWidget {
                         );
                         if (res != null) {
                           print("$tenant, ${path + res[0]}");
-                            await createConfig(tenant, path + res[0], res[1], res[2], res[3]);
-                            ref.refresh(configResultProvider(Tuple2<String, String>(tenant, path)));
+                          await createConfig(
+                              tenant, path + res[0], res[1], res[2], res[3]);
+                          ref.refresh(configResultProvider(
+                              Tuple2<String, String>(tenant, path)));
                         }
                       },
                     ),
@@ -316,17 +357,18 @@ class ConfigTab extends ConsumerWidget {
                       label: '删除',
                       labelStyle: TextStyle(fontSize: 18.0),
                       onTap: () async {
-                        var configName = ref.read(chooseStateProvider.notifier).state;
+                        var configName =
+                            ref.read(chooseStateProvider.notifier).state;
                         var res = await showOkCancelAlertDialog(
-                          context: context,
-                          title: "删除配置",
-                          message: "删除$configName配置",
-                          okLabel: "确认",
-                          cancelLabel: "取消"
-                        );
+                            context: context,
+                            title: "删除配置",
+                            message: "删除$configName配置",
+                            okLabel: "确认",
+                            cancelLabel: "取消");
                         if (res.name == "ok") {
                           await delConfig(tenant, path + configName);
-                          ref.refresh(configResultProvider(Tuple2<String, String>(tenant, path)));
+                          ref.refresh(configResultProvider(
+                              Tuple2<String, String>(tenant, path)));
                         }
                       },
                     ),

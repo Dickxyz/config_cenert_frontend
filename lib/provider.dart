@@ -27,6 +27,7 @@ final searchResultProvider = StateNotifierProvider<SearchResultNotifier, List<Te
 });
 
 final chooseStateProvider = StateProvider<String>((ref) => "__default__");
+final loginStateProvider = StateProvider<bool>((ref) => false);
 
 final configResultProvider = FutureProvider.family<List<Config>, Tuple2<String, String>> ((ref, args) {
   return getConfigs(args.item1, args.item2);
